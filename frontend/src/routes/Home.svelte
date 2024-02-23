@@ -36,9 +36,12 @@
         <tbody>
             {#each question_list as question, i}
             <tr>
-                <td>{i+1}</td>
+                <td>{total - ($page * size) - i}</td>
                 <td>
                     <a use:link href="/detail/{question.id}">{question.subject}</a>
+                    {#if question.answers.length > 0}
+                    <span class="text-danger small mx-2">{question.answers.length}</span>
+                    {/if}
                 </td>
                 <td>{moment(question.created_at).format("YYYY년 MM월 DD일 hh:mm a")}</td>
             </tr>
