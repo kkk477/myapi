@@ -1,13 +1,17 @@
-from passlib.context import CryptContext
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from domain.user.user_schema import UserCreate
-from models import User
+from starlette import status
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+from database import get_db
+from domain.user import user_schema, user_crud
 
-def create_user(db: Session, user_create: UserCreate):
-    db_user = User(username=user_create.username,
-                     password=pwd_context.hash(user_create.password1),
-                     email=user_create.email)
-    db.add(db_user)
-    db.commit()
+router = APIRouter(
+    prefix="/api/user"
+)
+
+@router.post("/create", status_code=status.HTTP_204_NO_CONTENT)
+def user_create(_user_create: user_schema.UserCreate, db: Session = Depends(get_db)):
+    user = user_crud.get_existing_user(db, user_create=_user_create)
+    if user:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="이미 존재하는 사용자입니다.")
+    user_crud.create_user(db=db, user_create=_user_create)
