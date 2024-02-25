@@ -17,3 +17,11 @@ class Answer(BaseModel):
     content: str
     created_at: datetime.datetime
     user: User | None
+    question_id: int
+    modified_at: datetime.datetime | None = None
+
+class AnswerUpdate(AnswerCreate):
+    answer_id: int
+
+class AnswerDelete(BaseModel):
+    answer_id: int
