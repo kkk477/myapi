@@ -1,6 +1,6 @@
 from datetime import timedelta, datetime, timezone
-from fastapi.security import OAuth2PasswordRequestForm
-from jose import jwt
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from jose import jwt, JWTError
 from domain.user.user_crud import pwd_context
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,10 +9,12 @@ from starlette import status
 
 from database import get_db
 from domain.user import user_schema, user_crud
+from models import User
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 SECRET_KEY = "4ab2f9e1c4a2907a6bd74d322dd64396315e135d9751edb1cc0172c03ce5c6b7"
 ALGORITHM = "HS256"
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/user/login")
 
 router = APIRouter(
     prefix="/api/user"
@@ -48,3 +50,23 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
         "token_type": "bearer",
         "username": user.username
     }
+
+def get_current_user(token: str = Depends(oauth2_scheme),
+                     db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    else:
+        user = user_crud.get_user(db, username=username)
+        if user is None:
+            raise credentials_exception
+        return user
